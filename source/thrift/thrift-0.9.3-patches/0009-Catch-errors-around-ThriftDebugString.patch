@@ -1,0 +1,108 @@
+From 4f749c2355176a990affbd95a4d477b82f7647f8 Mon Sep 17 00:00:00 2001
+From: Vihang Karajgaonkar <vihangk1@apache.org>
+Date: Wed, 17 Feb 2021 12:34:39 -0800
+Subject: [PATCH] Fixed the compilation issue
+
+---
+ .../src/thrift/protocol/TDebugProtocol.cpp    | 15 +++++++++++++
+ lib/cpp/src/thrift/protocol/TDebugProtocol.h  | 22 ++++++++++++++++---
+ 2 files changed, 34 insertions(+), 3 deletions(-)
+
+diff --git a/lib/cpp/src/thrift/protocol/TDebugProtocol.cpp b/lib/cpp/src/thrift/protocol/TDebugProtocol.cpp
+index 4687e82f..51f5c902 100644
+--- a/lib/cpp/src/thrift/protocol/TDebugProtocol.cpp
++++ b/lib/cpp/src/thrift/protocol/TDebugProtocol.cpp
+@@ -168,9 +168,24 @@ uint32_t TDebugProtocol::writeItem(const std::string& str) {
+   size += startItem();
+   size += writePlain(str);
+   size += endItem();
++  checkCurrentSize(size);
+   return size;
+ }
+ 
++void TDebugProtocol::checkCurrentSize(const uint32_t size) {
++  if (max_output_limit_ <= 0) {
++    return;
++  }
++  current_output_size_ += size;
++  if (current_output_size_ > max_output_limit_) {
++    std::string msg = "VIHANG-DEBUG: Max size ";
++    msg.append(std::to_string(max_output_limit_));
++    msg.append(" current size ");
++    msg.append(std::to_string(current_output_size_));
++    throw new TProtocolException(msg);
++  }
++}
++
+ uint32_t TDebugProtocol::writeMessageBegin(const std::string& name,
+                                            const TMessageType messageType,
+                                            const int32_t seqid) {
+diff --git a/lib/cpp/src/thrift/protocol/TDebugProtocol.h b/lib/cpp/src/thrift/protocol/TDebugProtocol.h
+index cc932302..50a52d55 100644
+--- a/lib/cpp/src/thrift/protocol/TDebugProtocol.h
++++ b/lib/cpp/src/thrift/protocol/TDebugProtocol.h
+@@ -66,6 +66,8 @@ public:
+ 
+   void setStringPrefixSize(int32_t string_prefix_size) { string_prefix_size_ = string_prefix_size; }
+ 
++  void setMaxOutputSizeLimit(uint32_t max_limit) { max_output_limit_ = max_limit; }
++
+   uint32_t writeMessageBegin(const std::string& name,
+                              const TMessageType messageType,
+                              const int32_t seqid);
+@@ -118,6 +120,7 @@ private:
+   uint32_t startItem();
+   uint32_t endItem();
+   uint32_t writeItem(const std::string& str);
++  void checkCurrentSize(uint32_t size);
+ 
+   static std::string fieldTypeName(TType type);
+ 
+@@ -125,6 +128,8 @@ private:
+ 
+   int32_t string_limit_;
+   int32_t string_prefix_size_;
++  uint32_t max_output_limit_;
++  uint32_t current_output_size_;
+ 
+   std::string indent_str_;
+   static const int indent_inc = 2;
+@@ -156,14 +161,21 @@ namespace apache {
+ namespace thrift {
+ 
+ template <typename ThriftStruct>
+-std::string ThriftDebugString(const ThriftStruct& ts) {
++std::string ThriftDebugString(const ThriftStruct& ts, uint32_t max_output_size) {
+   using namespace apache::thrift::transport;
+   using namespace apache::thrift::protocol;
+   TMemoryBuffer* buffer = new TMemoryBuffer;
+   boost::shared_ptr<TTransport> trans(buffer);
+   TDebugProtocol protocol(trans);
+-
+-  ts.write(&protocol);
++  protocol.setMaxOutputSizeLimit(max_output_size);
++
++  try {
++    ts.write(&protocol);
++  } catch(TException& e) {
++    return "Unable to write object due to error: " + std::string(e.what());
++  } catch (std::bad_alloc& ba) {
++    return "Caught bad_alloc error: " + std::string(ba.what());
++  }
+ 
+   uint8_t* buf;
+   uint32_t size;
+@@ -171,6 +183,10 @@ std::string ThriftDebugString(const ThriftStruct& ts) {
+   return std::string((char*)buf, (unsigned int)size);
+ }
+ 
++template <typename ThriftStruct>
++std::string ThriftDebugString(const ThriftStruct& ts) {
++  return ThriftDebugString(ts, 0);
++}
+ // TODO(dreiss): This is badly broken.  Don't use it unless you are me.
+ #if 0
+ template<typename Object>
+-- 
+2.17.1
+
