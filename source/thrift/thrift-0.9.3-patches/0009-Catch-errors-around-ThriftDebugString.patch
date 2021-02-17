@@ -1,4 +1,4 @@
-From d6c90ca998d885c487b4568f14c0918240b9f0aa Mon Sep 17 00:00:00 2001
+From 7ab8436803f453e6c5d64d825ed9124400a285c4 Mon Sep 17 00:00:00 2001
 From: Vihang Karajgaonkar <vihangk1@apache.org>
 Date: Tue, 9 Feb 2021 13:38:34 -0800
 Subject: [PATCH] Catch errors around ThriftDebugString
@@ -9,10 +9,10 @@ Subject: [PATCH] Catch errors around ThriftDebugString
  2 files changed, 34 insertions(+), 2 deletions(-)
 
 diff --git a/lib/cpp/src/thrift/protocol/TDebugProtocol.cpp b/lib/cpp/src/thrift/protocol/TDebugProtocol.cpp
-index 0e6d4a2a..d063326d 100644
+index 4687e82f..51f5c902 100644
 --- a/lib/cpp/src/thrift/protocol/TDebugProtocol.cpp
 +++ b/lib/cpp/src/thrift/protocol/TDebugProtocol.cpp
-@@ -167,9 +167,24 @@ uint32_t TDebugProtocol::writeItem(const std::string& str) {
+@@ -168,9 +168,24 @@ uint32_t TDebugProtocol::writeItem(const std::string& str) {
    size += startItem();
    size += writePlain(str);
    size += endItem();
@@ -38,7 +38,7 @@ index 0e6d4a2a..d063326d 100644
                                             const TMessageType messageType,
                                             const int32_t seqid) {
 diff --git a/lib/cpp/src/thrift/protocol/TDebugProtocol.h b/lib/cpp/src/thrift/protocol/TDebugProtocol.h
-index 41bb0d4e..1eba22be 100644
+index cc932302..56147e83 100644
 --- a/lib/cpp/src/thrift/protocol/TDebugProtocol.h
 +++ b/lib/cpp/src/thrift/protocol/TDebugProtocol.h
 @@ -66,6 +66,8 @@ public:
@@ -78,8 +78,8 @@ index 41bb0d4e..1eba22be 100644
 +std::string ThriftDebugString(const ThriftStruct& ts, int32_t max_output_size) {
    using namespace apache::thrift::transport;
    using namespace apache::thrift::protocol;
-   auto* buffer = new TMemoryBuffer;
-   std::shared_ptr<TTransport> trans(buffer);
+   TMemoryBuffer* buffer = new TMemoryBuffer;
+   boost::shared_ptr<TTransport> trans(buffer);
    TDebugProtocol protocol(trans);
 -
 -  ts.write(&protocol);
