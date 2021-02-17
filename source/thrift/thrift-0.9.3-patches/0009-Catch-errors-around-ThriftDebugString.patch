@@ -1,12 +1,12 @@
-From 7ab8436803f453e6c5d64d825ed9124400a285c4 Mon Sep 17 00:00:00 2001
+From 4f749c2355176a990affbd95a4d477b82f7647f8 Mon Sep 17 00:00:00 2001
 From: Vihang Karajgaonkar <vihangk1@apache.org>
-Date: Tue, 9 Feb 2021 13:38:34 -0800
-Subject: [PATCH] Catch errors around ThriftDebugString
+Date: Wed, 17 Feb 2021 12:34:39 -0800
+Subject: [PATCH] Fixed the compilation issue
 
 ---
  .../src/thrift/protocol/TDebugProtocol.cpp    | 15 +++++++++++++
- lib/cpp/src/thrift/protocol/TDebugProtocol.h  | 21 +++++++++++++++++--
- 2 files changed, 34 insertions(+), 2 deletions(-)
+ lib/cpp/src/thrift/protocol/TDebugProtocol.h  | 22 ++++++++++++++++---
+ 2 files changed, 34 insertions(+), 3 deletions(-)
 
 diff --git a/lib/cpp/src/thrift/protocol/TDebugProtocol.cpp b/lib/cpp/src/thrift/protocol/TDebugProtocol.cpp
 index 4687e82f..51f5c902 100644
@@ -38,14 +38,14 @@ index 4687e82f..51f5c902 100644
                                             const TMessageType messageType,
                                             const int32_t seqid) {
 diff --git a/lib/cpp/src/thrift/protocol/TDebugProtocol.h b/lib/cpp/src/thrift/protocol/TDebugProtocol.h
-index cc932302..56147e83 100644
+index cc932302..50a52d55 100644
 --- a/lib/cpp/src/thrift/protocol/TDebugProtocol.h
 +++ b/lib/cpp/src/thrift/protocol/TDebugProtocol.h
 @@ -66,6 +66,8 @@ public:
  
    void setStringPrefixSize(int32_t string_prefix_size) { string_prefix_size_ = string_prefix_size; }
  
-+  void setMaxOutputSizeLimit(int32_t max_limit) { max_output_limit_ = max_limit; }
++  void setMaxOutputSizeLimit(uint32_t max_limit) { max_output_limit_ = max_limit; }
 +
    uint32_t writeMessageBegin(const std::string& name,
                               const TMessageType messageType,
@@ -67,15 +67,12 @@ index cc932302..56147e83 100644
  
    std::string indent_str_;
    static const int indent_inc = 2;
-@@ -157,13 +162,25 @@ namespace thrift {
+@@ -156,14 +161,21 @@ namespace apache {
+ namespace thrift {
  
  template <typename ThriftStruct>
- std::string ThriftDebugString(const ThriftStruct& ts) {
-+  return ThriftDebugString(ts, 0);
-+}
-+
-+template <typename ThriftStruct>
-+std::string ThriftDebugString(const ThriftStruct& ts, int32_t max_output_size) {
+-std::string ThriftDebugString(const ThriftStruct& ts) {
++std::string ThriftDebugString(const ThriftStruct& ts, uint32_t max_output_size) {
    using namespace apache::thrift::transport;
    using namespace apache::thrift::protocol;
    TMemoryBuffer* buffer = new TMemoryBuffer;
@@ -95,6 +92,17 @@ index cc932302..56147e83 100644
  
    uint8_t* buf;
    uint32_t size;
+@@ -171,6 +183,10 @@ std::string ThriftDebugString(const ThriftStruct& ts) {
+   return std::string((char*)buf, (unsigned int)size);
+ }
+ 
++template <typename ThriftStruct>
++std::string ThriftDebugString(const ThriftStruct& ts) {
++  return ThriftDebugString(ts, 0);
++}
+ // TODO(dreiss): This is badly broken.  Don't use it unless you are me.
+ #if 0
+ template<typename Object>
 -- 
 2.17.1
 
